@@ -34,6 +34,39 @@ jobs:
           RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
         run: echo "${RELEASE_PLEASE_OUTPUT}" | jq
 
+  build:
+    if: needs.release-please.outputs.pr != null
+    runs-on: ubuntu-latest
+    needs: release-please
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+          token: ${{ secrets.FLUENCEBOT_RELEASE_PLEASE_PAT }}
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "npm"
+
+      - run: npm i
+      - run: npm run build
+
+      - name: Commit updated dist
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Rebuild dist"
+          branch: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+          commit_user_name: fluencebot
+          commit_user_email: devops@fluence.one
+          commit_author: fluencebot <devops@fluence.one>
+
   tag:
     if: needs.release-please.outputs.release-created
     runs-on: windows-latest
