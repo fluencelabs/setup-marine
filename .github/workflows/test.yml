@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  pull_request:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: "setup-marine"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        version:
+          - latest
+          - 0.14.0
+          - v0.14.0
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "npm"
+
+      - run: npm i
+      - run: npm run build
+
+      - name: Setup Marine
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+
+      - name: Test Marine
+        run: marine --version

@@ -1,0 +1,17 @@
+name: "Setup Marine"
+description: "Set up Fluence Marine CLI"
+author: "Fluence Labs"
+
+branding:
+  icon: "tool"
+  color: "purple"
+
+inputs:
+  version:
+    description: "Version of marine to install"
+    type: string
+    default: "latest"
+
+runs:
+  using: "node16"
+  main: "dist/index.js"
