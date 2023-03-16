@@ -37,5 +37,6 @@ jobs:
   tag:
     if: needs.release-please.outputs.release-created
     runs-on: windows-latest
+    needs: release-please
     steps:
       - uses: Actions-R-Us/actions-tagger@v2.0.3
