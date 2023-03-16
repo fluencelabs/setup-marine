@@ -1,6 +1,6 @@
 {
   "name": "setup-marine",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Setup Marine CLI for GitHub Actions",
   "main": "index.js",
   "scripts": {
