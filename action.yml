@@ -3,7 +3,7 @@ description: "Set up Fluence Marine CLI"
 author: "Fluence Labs"
 
 branding:
-  icon: "tool"
+  icon: "code"
   color: "purple"
 
 inputs:
