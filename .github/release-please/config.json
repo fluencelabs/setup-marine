@@ -1,8 +1,6 @@
 {
   "release-type": "node",
   "packages": {
-    ".": {
-      "component": "."
-    }
+    ".": {}
   }
 }
