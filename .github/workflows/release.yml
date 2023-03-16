@@ -66,10 +66,3 @@ jobs:
           commit_user_name: fluencebot
           commit_user_email: devops@fluence.one
           commit_author: fluencebot <devops@fluence.one>
-
-  tag:
-    if: needs.release-please.outputs.release-created
-    runs-on: windows-latest
-    needs: release-please
-    steps:
-      - uses: Actions-R-Us/actions-tagger@v2.0.3
