@@ -1,5 +1,5 @@
 name: "Setup Marine"
-description: "Set up Fluence Marine binary"
+description: "Set up Fluence Marine CLI"
 author: "Fluence Labs"
 
 branding:
