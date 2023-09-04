@@ -12,6 +12,7 @@ jobs:
     name: "setup-marine"
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
@@ -19,7 +20,6 @@ jobs:
         version:
           - latest
           - 0.14.0
-          - v0.14.0
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
