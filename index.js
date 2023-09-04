@@ -103,21 +103,22 @@ async function run() {
       throw new Error(`Unsupported platform: ${platform}`);
     }
 
-    let version = core.getInput("version");
     if (version === "latest") {
-      try {
-        const latestRelease = await octokit.repos.getLatestRelease({
-          owner,
-          repo,
-        });
-        version = latestRelease.data.tag_name.replace(/^marine-v/, "");
-        core.info(`Latest marine release is v${version}`);
-      } catch (error) {
-        core.warning(
-          `Couldn't fetch the latest release. Error: ${error.message}`,
-        );
-        throw new Error("No marine release found");
+      const releases = await octokit.repos.listReleases({
+        owner: "fluencelabs",
+        repo: "marine",
+      });
+
+      const latestMarineRelease = releases.data.find((release) =>
+        release.tag_name.startsWith("marine-v")
+      );
+
+      if (!latestMarineRelease) {
+        throw new Error("No marine-v release found");
       }
+
+      version = latestMarineRelease.tag_name.replace(/^marine-v/, "");
+      core.info(`Latest marine release is v${version}`);
     } else {
       version = version.replace(/^v/, "");
     }
