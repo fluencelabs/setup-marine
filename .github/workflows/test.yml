@@ -41,15 +41,16 @@ jobs:
         run: marine --version
 
       - name: Get marine path
-        id: path
         if: matrix.version == 'latest'
+        id: path
         run: echo "bin=$(which marine)" >> $GITHUB_OUTPUT
 
       - name: Upload marine binary
+        if: matrix.version == 'latest'
         uses: actions/upload-artifact@v3
         with:
           name: marine
-          path: ${{ steps.id.outputs.bin }}
+          path: ${{ steps.path.outputs.bin }}
 
   artifact:
     name: "setup artifact"
