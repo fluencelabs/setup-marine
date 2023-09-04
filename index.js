@@ -2,7 +2,7 @@ const core = require("@actions/core");
 const tc = require("@actions/tool-cache");
 const { promisify } = require("util");
 const { exec } = require("child_process");
-const { chmod } = require("fs");
+const { chmod, createWriteStream } = require("fs");
 const https = require("https");
 const path = require("path");
 const yauzl = require("yauzl");
@@ -38,7 +38,7 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
   }
 
   const downloadPath = path.join(process.cwd(), artifact.name);
-  const writeStream = fs.createWriteStream(downloadPath);
+  const writeStream = createWriteStream(downloadPath);
 
   return new Promise((resolve, reject) => {
     https.get(artifact.archive_download_url, (response) => {

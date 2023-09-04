@@ -14578,7 +14578,7 @@ const core = __nccwpck_require__(2186);
 const tc = __nccwpck_require__(7784);
 const { promisify } = __nccwpck_require__(3837);
 const { exec } = __nccwpck_require__(2081);
-const { chmod } = __nccwpck_require__(7147);
+const { chmod, createWriteStream } = __nccwpck_require__(7147);
 const https = __nccwpck_require__(5687);
 const path = __nccwpck_require__(1017);
 const yauzl = __nccwpck_require__(8781);
@@ -14614,7 +14614,7 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
   }
 
   const downloadPath = path.join(process.cwd(), artifact.name);
-  const writeStream = fs.createWriteStream(downloadPath);
+  const writeStream = createWriteStream(downloadPath);
 
   return new Promise((resolve, reject) => {
     https.get(artifact.archive_download_url, (response) => {
