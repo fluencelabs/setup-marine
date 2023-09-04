@@ -82,7 +82,7 @@ async function run() {
         marinePath = await downloadArtifact(artifactName);
         core.addPath(marinePath);
         await promisify(fs.chmod)(`${marinePath}/marine`, 0o755);
-        console.log(`${marinePath}/marine --version`);
+        exec(`${marinePath}/marine --version`);
         return;
       } catch (_error) {
         core.warning(
@@ -118,7 +118,7 @@ async function run() {
 
     core.addPath(marinePath);
     await promisify(fs.chmod)(`${marinePath}/marine`, 0o755);
-    console.log(`${marinePath}/marine --version`);
+    exec(`${marinePath}/marine --version`);
   } catch (error) {
     core.setFailed(error.message);
   }
