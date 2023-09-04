@@ -4,6 +4,7 @@ const { promisify } = require("util");
 const { exec } = require("child_process");
 const { chmod } = require("fs");
 const { Octokit } = require("@octokit/rest");
+const yauzl = require("yauzl");
 
 const DOWNLOAD_URL = "https://github.com/fluencelabs/marine/releases/download/";
 const SUPPORTED_PLATFORMS = ["linux-x86_64", "darwin-x86_64"];
@@ -19,8 +20,80 @@ function guessPlatform() {
   return platformMappings[platform] || platform;
 }
 
+async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
+  const { data: artifacts } = await octokit.actions.listArtifactsForRepo({
+    owner,
+    repo,
+  });
+
+  const artifact = artifacts.artifacts.find((a) => a.name === artifactName);
+
+  if (!artifact) {
+    throw new Error(`Artifact "${artifactName}" not found.`);
+  }
+
+  const downloadPath = path.join(process.cwd(), artifact.name);
+  const writeStream = fs.createWriteStream(downloadPath);
+
+  return new Promise((resolve, reject) => {
+    https.get(artifact.archive_download_url, (response) => {
+      response.pipe(writeStream).on("finish", () => {
+        yauzl.open(downloadPath, { lazyEntries: true }, (err, zipfile) => {
+          if (err) reject(err);
+
+          zipfile.readEntry();
+
+          zipfile.on("entry", (entry) => {
+            if (/\/$/.test(entry.fileName)) {
+              // Directory file names end with '/'
+              zipfile.readEntry();
+            } else {
+              zipfile.extractEntryTo(
+                entry,
+                process.env.RUNNER_TEMP,
+                false,
+                true,
+                (error) => {
+                  if (error) reject(error);
+                  resolve(path.join(process.env.RUNNER_TEMP, entry.fileName));
+                },
+              );
+            }
+          });
+        });
+      });
+    });
+  });
+}
+
+async function setupBinary(binaryPath, binaryName) {
+  // Ensuring the binary has the proper permissions
+  await promisify(chmod)(binaryPath, 0o755);
+
+  // Adding the path to the PATH
+  core.addPath(path.dirname(binaryPath));
+
+  await promisify(exec)(`${binaryName} --version`); // Use the binary name to check version
+  core.info(`${binaryName} has been set up successfully`);
+}
+
 async function run() {
   try {
+    const octokit = new Octokit();
+    const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+
+    const artifactName = core.getInput("artifact-name");
+    if (artifactName) {
+      const binaryPath = await downloadAndUnpackArtifact(
+        octokit,
+        owner,
+        repo,
+        artifactName,
+      );
+      await setupBinary(binaryPath, artifactName);
+      return;
+    }
+
     const platform = guessPlatform();
     if (!SUPPORTED_PLATFORMS.includes(platform)) {
       throw new Error(`Unsupported platform: ${platform}`);
@@ -28,10 +101,9 @@ async function run() {
 
     let version = core.getInput("version");
     if (version === "latest") {
-      const octokit = new Octokit();
       const releases = await octokit.repos.listReleases({
-        owner: "fluencelabs",
-        repo: "marine",
+        owner,
+        repo,
       });
       const latestRelease = releases.data.find((release) =>
         release.tag_name.startsWith("marine-v")
@@ -63,13 +135,7 @@ async function run() {
       marinePath = cachedPath;
     }
 
-    core.addPath(marinePath);
-    await promisify(chmod)(`${marinePath}/marine`, 0o755);
-
-    await promisify(exec)("marine --version");
-    core.info(
-      `marine v${version} for ${platform} has been set up successfully`,
-    );
+    await setupBinary(`${marinePath}/marine`, "marine");
   } catch (error) {
     core.setFailed(error.message);
   }
