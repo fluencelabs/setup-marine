@@ -11,6 +11,9 @@ inputs:
     description: "Version of marine to install"
     type: string
     default: "latest"
+  artifact-name:
+    description: "Artifact name from GitHub containing marine binary snapshot"
+    type: string
 
 runs:
   using: "node16"
