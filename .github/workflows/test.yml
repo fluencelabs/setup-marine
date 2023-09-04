@@ -39,3 +39,38 @@ jobs:
 
       - name: Test Marine
         run: marine --version
+
+      - name: Get marine path
+        id: path
+        if: matrix.version == 'latest'
+        run: echo "bin=$(which marine)" >> $GITHUB_OUTPUT
+
+      - name: Upload marine binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: marine
+          path: ${{ steps.id.outputs.bin }}
+
+  artifact:
+    name: "setup artifact"
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "npm"
+
+      - run: npm i
+      - run: npm run build
+
+      - name: Setup Marine
+        uses: ./
+        with:
+          artifact-name: marine
+
+      - name: Test Marine
+        run: marine --version
