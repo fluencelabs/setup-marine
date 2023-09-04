@@ -110,11 +110,11 @@ async function run() {
       });
 
       const latestMarineRelease = releases.data.find((release) =>
-        release.tag_name.startsWith("marine-v")
+        release.tag_name.startsWith("marine")
       );
 
       if (!latestMarineRelease) {
-        throw new Error("No marine-v release found");
+        throw new Error("No marine release found");
       }
 
       version = latestMarineRelease.tag_name.replace(/^marine-v/, "");
