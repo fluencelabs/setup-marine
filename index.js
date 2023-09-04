@@ -1,11 +1,10 @@
 const core = require("@actions/core");
 const tc = require("@actions/tool-cache");
-const { promisify } = require("util");
 const { Octokit } = require("@octokit/rest");
 const { create } = require("@actions/artifact");
 const path = require("path");
 const fs = require("fs");
-
+const { execSync } = require('child_process');
 const DOWNLOAD_URL = "https://github.com/fluencelabs/marine/releases/download/";
 const SUPPORTED_PLATFORMS = ["linux-x86_64", "darwin-x86_64"];
 
@@ -67,61 +66,55 @@ async function getLatestVersionFromReleases() {
   return latestRelease.tag_name.replace(/^marine-v/, "");
 }
 
-async function run() {
-  try {
-    const platform = guessPlatform();
-    if (!SUPPORTED_PLATFORMS.includes(platform)) {
-      throw new Error(`Unsupported platform: ${platform}`);
-    }
-
-    let marinePath;
-
-    const artifactName = core.getInput("artifact-name");
-    if (artifactName) {
-      try {
-        marinePath = await downloadArtifact(artifactName);
-        core.addPath(marinePath);
-        await promisify(fs.chmod)(`${marinePath}/marine`, 0o755);
-        exec(`${marinePath}/marine --version`);
-        return;
-      } catch (_error) {
-        core.warning(
-          `Failed to download artifact with name ${artifactName}. Fallback to releases.`,
-        );
-      }
-    }
-
-    let version = core.getInput("version");
-    if (version === "latest") {
-      version = await getLatestVersionFromReleases();
-      core.info(`Latest marine release is v${version}`);
-    } else {
-      version = version.replace(/^v/, "");
-    }
-
-    const filename = `marine`;
-    const downloadUrl =
-      `${DOWNLOAD_URL}marine-v${version}/${filename}-${platform}`;
-    const cachedPath = tc.find("marine", version, platform);
-
-    if (!cachedPath) {
-      const downloadPath = await tc.downloadTool(downloadUrl);
-      marinePath = await tc.cacheFile(
-        downloadPath,
-        filename,
-        "marine",
-        version,
-      );
-    } else {
-      marinePath = cachedPath;
-    }
-
+async function setupBinary(marinePath) {
     core.addPath(marinePath);
-    await promisify(fs.chmod)(`${marinePath}/marine`, 0o755);
-    exec(`${marinePath}/marine --version`);
-  } catch (error) {
-    core.setFailed(error.message);
-  }
+    await fs.promises.chmod(`${marinePath}/marine`, 0o755);
+    execSync(`${marinePath}/marine --version`, { stdio: 'inherit' });
+}
+
+async function run() {
+    try {
+        const platform = guessPlatform();
+        if (!SUPPORTED_PLATFORMS.includes(platform)) {
+            throw new Error(`Unsupported platform: ${platform}`);
+        }
+
+        const artifactName = core.getInput("artifact-name");
+        let marinePath;
+
+        if (artifactName) {
+            try {
+                marinePath = await downloadArtifact(artifactName);
+                await setupBinary(marinePath);
+                return;
+            } catch (_error) {
+                core.warning(`Failed to download artifact with name ${artifactName}. Fallback to releases.`);
+            }
+        }
+
+        let version = core.getInput("version");
+        if (version === "latest") {
+            version = await getLatestVersionFromReleases();
+            core.info(`Latest marine release is v${version}`);
+        } else {
+            version = version.replace(/^v/, "");
+        }
+
+        const filename = `marine`;
+        const downloadUrl = `${DOWNLOAD_URL}marine-v${version}/${filename}-${platform}`;
+        const cachedPath = tc.find("marine", version, platform);
+
+        if (!cachedPath) {
+            const downloadPath = await tc.downloadTool(downloadUrl);
+            marinePath = await tc.cacheFile(downloadPath, filename, "marine", version);
+        } else {
+            marinePath = cachedPath;
+        }
+
+        await setupBinary(marinePath);
+    } catch (error) {
+        core.setFailed(error.message);
+    }
 }
 
 run();
