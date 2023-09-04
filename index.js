@@ -29,7 +29,10 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
   const artifact = artifacts.artifacts.find((a) => a.name === artifactName);
 
   if (!artifact) {
-    throw new Error(`Artifact "${artifactName}" not found.`);
+    core.warning(
+      `Artifact "${artifactName}" not found. Falling back to GitHub releases.`,
+    );
+    return null;
   }
 
   const downloadPath = path.join(process.cwd(), artifact.name);
@@ -45,7 +48,6 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
 
           zipfile.on("entry", (entry) => {
             if (/\/$/.test(entry.fileName)) {
-              // Directory file names end with '/'
               zipfile.readEntry();
             } else {
               zipfile.extractEntryTo(
@@ -67,13 +69,11 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
 }
 
 async function setupBinary(binaryPath, binaryName) {
-  // Ensuring the binary has the proper permissions
   await promisify(chmod)(binaryPath, 0o755);
 
-  // Adding the path to the PATH
   core.addPath(path.dirname(binaryPath));
 
-  await promisify(exec)(`${binaryName} --version`); // Use the binary name to check version
+  await promisify(exec)(`${binaryName} --version`);
   core.info(`${binaryName} has been set up successfully`);
 }
 
@@ -90,8 +90,10 @@ async function run() {
         repo,
         artifactName,
       );
-      await setupBinary(binaryPath, artifactName);
-      return;
+      if (binaryPath) {
+        await setupBinary(binaryPath, artifactName);
+        return;
+      }
     }
 
     const platform = guessPlatform();
