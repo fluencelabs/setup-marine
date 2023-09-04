@@ -20003,9 +20003,10 @@ var __webpack_exports__ = {};
 const core = __nccwpck_require__(2186);
 const tc = __nccwpck_require__(7784);
 const { promisify } = __nccwpck_require__(3837);
-const { chmod } = __nccwpck_require__(7147);
 const { Octokit } = __nccwpck_require__(5375);
 const { create } = __nccwpck_require__(2605);
+const path = __nccwpck_require__(1017);
+const fs = __nccwpck_require__(7147);
 
 const DOWNLOAD_URL = "https://github.com/fluencelabs/marine/releases/download/";
 const SUPPORTED_PLATFORMS = ["linux-x86_64", "darwin-x86_64"];
@@ -20023,8 +20024,34 @@ function guessPlatform() {
 
 async function downloadArtifact(artifactName) {
   const artifactClient = create();
-  const downloadResponse = await artifactClient.downloadArtifact(artifactName);
-  return `${downloadResponse.downloadPath}/marine`;
+  const tempDirectory = process.env.RUNNER_TEMP; // GitHub Actions' temp directory
+
+  if (!tempDirectory) {
+    throw new Error("Temp directory not found");
+  }
+
+  // Create a unique directory for our action within the temp directory
+  const uniqueTempDir = path.join(
+    tempDirectory,
+    `marine-artifact-${Date.now()}`,
+  );
+  fs.mkdirSync(uniqueTempDir, { recursive: true });
+
+  const downloadResponse = await artifactClient.downloadArtifact(
+    artifactName,
+    uniqueTempDir,
+  );
+
+  const marineBinaryPath = path.join(downloadResponse.downloadPath, "marine");
+
+  // Check if the marine binary exists at the expected location
+  if (fs.existsSync(marineBinaryPath)) {
+    return downloadResponse.downloadPath; // Return the directory containing the marine binary
+  } else {
+    throw new Error(
+      `Expected marine binary not found in the artifact at path: ${marineBinaryPath}`,
+    );
+  }
 }
 
 async function getLatestVersionFromReleases() {
@@ -20037,7 +20064,7 @@ async function getLatestVersionFromReleases() {
     release.tag_name.startsWith("marine-v")
   );
   if (!latestRelease) {
-    throw new Error("No marine release found");
+    throw new Error("No latest marine release found");
   }
   return latestRelease.tag_name.replace(/^marine-v/, "");
 }
@@ -20056,6 +20083,8 @@ async function run() {
       try {
         marinePath = await downloadArtifact(artifactName);
         core.addPath(marinePath);
+        await promisify(fs.chmod)(`${marinePath}/marine`, 0o755);
+        console.log(`${marinePath}/marine --version`);
         return;
       } catch (_error) {
         core.warning(
@@ -20090,7 +20119,7 @@ async function run() {
     }
 
     core.addPath(marinePath);
-    await promisify(chmod)(`${marinePath}/marine`, 0o755);
+    await promisify(fs.chmod)(`${marinePath}/marine`, 0o755);
     console.log(`${marinePath}/marine --version`);
   } catch (error) {
     core.setFailed(error.message);
