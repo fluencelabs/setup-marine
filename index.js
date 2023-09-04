@@ -75,7 +75,7 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
 async function setupBinary(binaryPath, binaryName) {
   await promisify(chmod)(binaryPath, 0o755);
   core.addPath(path.dirname(binaryPath));
-  await exec.exec(`${binaryName} --version`);
+  await exec(`${binaryName} --version`);
   core.info(`${binaryName} has been set up successfully`);
 }
 
