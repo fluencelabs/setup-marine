@@ -3,8 +3,10 @@ const tc = require("@actions/tool-cache");
 const { promisify } = require("util");
 const { exec } = require("child_process");
 const { chmod } = require("fs");
-const { Octokit } = require("@octokit/rest");
+const https = require("https");
+const path = require("path");
 const yauzl = require("yauzl");
+const { Octokit } = require("@octokit/rest");
 
 const DOWNLOAD_URL = "https://github.com/fluencelabs/marine/releases/download/";
 const SUPPORTED_PLATFORMS = ["linux-x86_64", "darwin-x86_64"];
@@ -49,7 +51,7 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
           zipfile.on("entry", (entry) => {
             if (/\/$/.test(entry.fileName)) {
               zipfile.readEntry();
-            } else {
+            } else if (entry.fileName === "marine") {
               zipfile.extractEntryTo(
                 entry,
                 process.env.RUNNER_TEMP,
@@ -60,6 +62,8 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
                   resolve(path.join(process.env.RUNNER_TEMP, entry.fileName));
                 },
               );
+            } else {
+              zipfile.readEntry();
             }
           });
         });
@@ -70,9 +74,7 @@ async function downloadAndUnpackArtifact(octokit, owner, repo, artifactName) {
 
 async function setupBinary(binaryPath, binaryName) {
   await promisify(chmod)(binaryPath, 0o755);
-
   core.addPath(path.dirname(binaryPath));
-
   await promisify(exec)(`${binaryName} --version`);
   core.info(`${binaryName} has been set up successfully`);
 }
@@ -91,7 +93,7 @@ async function run() {
         artifactName,
       );
       if (binaryPath) {
-        await setupBinary(binaryPath, artifactName);
+        await setupBinary(binaryPath, "marine");
         return;
       }
     }
