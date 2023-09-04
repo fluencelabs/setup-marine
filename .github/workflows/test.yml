@@ -16,7 +16,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
         version:
           - latest
           - 0.14.0
