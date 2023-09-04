@@ -14679,6 +14679,7 @@ async function run() {
       throw new Error(`Unsupported platform: ${platform}`);
     }
 
+    let version = core.getInput("version");
     if (version === "latest") {
       const releases = await octokit.repos.listReleases({
         owner: "fluencelabs",
